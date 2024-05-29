@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "version": "1.0",
+  "name": "keyword blocker edge extension ",
+  "description": "A demo popup experience",
+  "action": {
+    
+    "default_popup": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "permissions": ["alarms", "notifications", "storage", "tabs", "activeTab", "webNavigation","scripting"],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}
