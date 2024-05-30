@@ -1,6 +1,8 @@
 console.log("hello from content js");
 
 let finItems;
+let websitesToRemove;
+let urlToRemove;
 // Send a message to the background script to get the items
 chrome.runtime.sendMessage({ type: "getItems" }, (response) => {
 	const items = response.items || [];
@@ -8,6 +10,24 @@ chrome.runtime.sendMessage({ type: "getItems" }, (response) => {
 	console.log("Items retrieved from storage:", items);
 	checkAndDelete();
 	// Do something with the items, e.g., block keywords on the page
+});
+
+
+chrome.runtime.sendMessage({ type: "getUrlsToRemove" }, (response) => {
+	const urls = response.urls || [];
+	urlToRemove = urls;
+	console.log("Urls retrieved from storage:", urls);
+	urlToRemove = urls;
+	console.log(urlToRemove);
+	closingUrls();
+});
+
+chrome.runtime.sendMessage({ type: "getWebsitesToRemove" }, (response) => {
+	const websites = response.websites || [];
+	console.log("Websites retrieved from storage:", websites);
+	websitesToRemove = websites;
+	console.log(websitesToRemove);
+	closingWebsites();
 });
 
 // function checkAndDelete(){
@@ -59,3 +79,30 @@ function checkAndDelete() {
 		}
 	});
 }
+
+function closingWebsites(){
+	if (websitesToRemove) {
+		websitesToRemove.map((website) => {
+			if (window.location.hostname == website) {
+				console.log("going in if");
+				chrome.runtime.sendMessage({ type: "closeTabwebsites" });
+			}
+		});
+	}
+	
+}
+
+
+
+
+function closingUrls(){
+	if(urlToRemove){
+		urlToRemove.map((url)=>{
+			if(window.location.href == url){
+				console.log("going in if");
+				chrome.runtime.sendMessage({type: "closeTabUrls"});
+			}
+		})
+	}
+}
+

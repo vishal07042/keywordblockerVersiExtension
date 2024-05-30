@@ -191,6 +191,25 @@ function App() {
         });
     }, []);
 
+      useEffect(() => {
+			chrome.storage.sync.get(
+				["listOfBlockedWebsites", "listOfBlockedUrls"],
+				(result) => {
+					if (chrome.runtime.lastError) {
+						console.error(
+							"Error retrieving lists: ",
+							chrome.runtime.lastError
+						);
+						return;
+					}
+					setListOfBlockedWebsites(
+						result.listOfBlockedWebsites || []
+					);
+					setListOfBlockedUrls(result.listOfBlockedUrls || []);
+				}
+			);
+		}, []);
+
     useEffect(() => {
         if (btn1) {
             chrome.storage.sync.set({ listOfBlockedWebsites }, () => {
@@ -213,12 +232,22 @@ function App() {
 
     const addToBlockedWebsites = () => {
         setBtn1(true);
+        if (!listOfBlockedWebsites.includes(hostname)) {
         setListOfBlockedWebsites((prevList) => [...prevList, hostname]);
+        }
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.remove(tabs[0].id);
+        });
     };
 
     const addToBlockedUrls = () => {
         setBtn2(true);
+         if (!listOfBlockedUrls.includes(href)) {
         setListOfBlockedUrls((prevList) => [...prevList, href]);
+         }
+         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.remove(tabs[0].id);
+        });
     };
 
 	function getBlockedWebsites(callback) {
@@ -242,6 +271,17 @@ function App() {
 		// You can perform further actions with the retrieved list here
 	});
 
+    function getBlockedUrls(callback) {
+		chrome.storage.sync.get(["listOfBlockedUrls"], (result) => {
+			const listOfBlockedUrls = result.listOfBlockedUrls || [];
+			callback(listOfBlockedUrls);
+		});
+	}
+
+    getBlockedUrls((listOfBlockedUrls) => {
+		console.log("List of blocked urls: ", listOfBlockedUrls);
+		// You can perform further actions with the retrieved list here
+	});
 
     return (
         <div>

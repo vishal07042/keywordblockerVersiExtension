@@ -1,29 +1,37 @@
-
-
-
 import { useEffect, useState } from "react";
 
 export default function App() {
+
+
 	const [items, setItems] = useState([]);
 	const [websites, setWebsites] = useState([]);
+	const [blockedUrls, setBlockedUrls] = useState([]);
+	const [password, setPassword] = useState(false);
+	const [letUserPassword, setLetUserPassword] = useState("");
 
-	const  [web ,setweb] = useState([])
+	const [statetoShowPassword, setStatetoShowPassword] = useState(undefined);
 
 	useEffect(() => {
 		// Fetch items from storage when the component mounts
 		chrome.storage.sync.get("items", (data) => {
 			setItems(data.items || []);
 		});
-		// Fetch items from background.js
-		chrome.runtime.sendMessage({ type: "getItems" }, (response) => {
-			setItems(response.items || []);
-		});
 
 		// Fetch blocked websites from storage
-	const ds =	chrome.storage.sync.get("listofblokcedwebsites", (data) => {
-			setWebsites(data.listofblokcedwebsites || []);
+		chrome.storage.sync.get("listOfBlockedWebsites", (data) => {
+			setWebsites(data.listOfBlockedWebsites || []);
 		});
-		console.log(ds,"list of websites getting from storage")
+
+		// Fetch blocked URLs from storage
+		chrome.storage.sync.get("listOfBlockedUrls", (data) => {
+			setBlockedUrls(data.listOfBlockedUrls || []);
+		});
+
+		chrome.storage.sync.get([
+						"passwordsUser",
+					], (data) => {
+						setStatetoShowPassword(data.passwordsUser || undefined);
+					});
 	}, []);
 
 	const onSubmitKeywords = () => {
@@ -44,6 +52,9 @@ export default function App() {
 	const onRemoveItem = (itemToRemove) => {
 		const newItems = items.filter((item) => item !== itemToRemove);
 		setItems(newItems);
+		chrome.storage.sync.set({ items: newItems }, () => {
+			console.log("Item removed from keywords list");
+		});
 	};
 
 	const onRemoveWebsite = (websiteToRemove) => {
@@ -51,9 +62,16 @@ export default function App() {
 			(website) => website !== websiteToRemove
 		);
 		setWebsites(newWebsites);
-		// Update Chrome storage with the new list of blocked websites
-		chrome.storage.sync.set({ listofblokcedwebsites: newWebsites }, () => {
+		chrome.storage.sync.set({ listOfBlockedWebsites: newWebsites }, () => {
 			console.log("Website removed from blocked list");
+		});
+	};
+
+	const onRemoveUrl = (urlToRemove) => {
+		const newUrls = blockedUrls.filter((url) => url !== urlToRemove); // Corrected variable usage
+		setBlockedUrls(newUrls);
+		chrome.storage.sync.set({ listOfBlockedUrls: newUrls }, () => {
+			console.log("Url removed from blocked list");
 		});
 	};
 
@@ -65,36 +83,6 @@ export default function App() {
 		setItems(newItems);
 		form.reset();
 	};
-
-
-
-useEffect(()=>{
-	function getBlockedWebsites(callback) {
-		chrome.storage.sync.get(["listOfBlockedWebsites"], (result) => {
-			const listOfBlockedWebsites = result.listOfBlockedWebsites || [];
-			console.log("Retrieved list: ", listOfBlockedWebsites);
-			callback(listOfBlockedWebsites);
-
-			let sett = [...listOfBlockedWebsites, listOfBlockedWebsites];
-
-			setweb(sett);
-			console.log(web);
-		});
-	}
-
-	// Example usage:
-	getBlockedWebsites((listOfBlockedWebsites) => {
-		console.log("List of blocked websites: ", listOfBlockedWebsites);
-		// You can perform further actions with the retrieved list here
-	});
-	
-},[])
-
-	
-
-
-
-	
 
 	return (
 		<>
@@ -130,25 +118,108 @@ useEffect(()=>{
 				Submit
 			</button>
 
-		{web && web.map((website,index)=>(
-			<Item item={website}  onRemoveItem={} 	 key={website+index}></Item>
-		))}
+			<h2 className='font-bold text-2xl bg-red-500 text-center justify-center my-[3.5rem]'>
+				Blocked Websites
+			</h2>
+			<ul>
+				{websites.map((website, index) => (
+					<Item
+						onRemoveItem={onRemoveWebsite}
+						key={website + index}
+						item={website}
+						className='text-4xl'
+					/>
+				))}
+			</ul>
 
+			<h2 className='font-bold text-2xl bg-red-500 text-center justify-center'>
+				Blocked URLs
+			</h2>
+			<ul>
+				{blockedUrls.map((url, index) => (
+					<Item
+						onRemoveItem={onRemoveUrl}
+						key={url + index}
+						item={url}
+						className='text-4xl'
+					/>
+				))}
+			</ul>
+
+			<form
+				onSubmit={async (e) => {
+					e.preventDefault();
+
+					await chrome.storage.sync.set(
+						{ passwordsUser: letUserPassword },
+						() => {
+							setPassword(true);
+							console.log("Password set in storage");
+							console.log(letUserPassword);
+						}
+					);
+				}}
+				className='  my-3 gap-4'
+			>
+				<label
+					htmlFor='password'
+					className='text-2xl inline gap-2 mx-3'
+				>
+					set password
+				</label>
+				{statetoShowPassword ? <p>password set</p> : <input
+					type='password'
+					placeholder='password min 8 characters'
+					min={8}
+					id='password'
+					name='password'
+					className='border-2 border-black text-4xl'
+					value={letUserPassword}
+					onChange={(e) => {
+						let v = e.target.value;
+						if (v.length >= 8) {
+						} else {
+						}
+						setLetUserPassword(v);
+					}}
+				/>}
+				<button
+					className='bg-red-500 text-white p-2 rounded-md text-2xl m-4 block'
+					type='submit'
+				>
+					{password ? "done" : "submit"}
+				</button>
+			</form>
 		</>
 	);
 }
 
-function Item({ item, onRemoveItem, onRemoveWebsite }) {
+function Item({ item, onRemoveItem }) {
 	return (
 		<li className='text-4xl my-3'>
 			{item}
 			<button
 				className='delete text-6xl'
-				onClick={() => onRemoveItem(item)}
+				onClick={async () => {
+					const d = prompt("enter your password");
+					const result = await chrome.storage.sync.get([
+						"passwordsUser",
+					]);
+					console.log("restult", result);
+					const userPasswordfromStorage = await result.passwordsUser;
+					console.log(
+						"userpasswordfromestorage",
+						userPasswordfromStorage
+					);
+					if (d === userPasswordfromStorage) {
+						onRemoveItem(item);
+					} else {
+						alert("wrong password");
+					}
+				}}
 			>
 				<span className='text-4xl mx-4'>x</span>
 			</button>
-			
 		</li>
 	);
 }
